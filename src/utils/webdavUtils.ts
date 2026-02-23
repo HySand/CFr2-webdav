@@ -7,7 +7,7 @@ export function make_resource_path(request: Request): string {
   return decodeURIComponent(url.pathname.slice(1));
 }
 
-async function* listAll(bucket, prefix) {
+export async function* listAll(bucket, prefix) {
   const options = { prefix, delimiter: "/" };
   let result = await bucket.list(options);
 
