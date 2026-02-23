@@ -8,7 +8,7 @@ export async function handleRequest(request: Request, env: Env, ctx: ExecutionCo
   try {
     const method = request.method.toUpperCase();
     
-    const publicMethods = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
+    const publicMethods = ["GET", "HEAD", "OPTIONS"];
     const isPublic = publicMethods.includes(method);
 
     if (!isPublic && !authenticate(request, env)) {
