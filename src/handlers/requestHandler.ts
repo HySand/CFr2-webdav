@@ -5,28 +5,38 @@ import { setCORSHeaders } from '../utils/cors';
 import { logger } from '../utils/logger';
 
 export async function handleRequest(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  try {
+  const url = new URL(request.url);
     const method = request.method.toUpperCase();
-    
-    const publicMethods = ["GET", "HEAD", "OPTIONS"];
-    const isPublic = publicMethods.includes(method);
+    const pathname = url.pathname;
 
-    if (!isPublic && !authenticate(request, env)) {
-      return new Response("Unauthorized", {
+    const isPublicPath = pathname.startsWith("/public/");
+
+    const readOnlyMethods = ["GET", "HEAD", "OPTIONS", "PROPFIND"];
+    const isReadOnly = readOnlyMethods.includes(method);
+    
+    let authorized = false;
+
+    if (isPublicPath && isReadOnly) {
+      authorized = true;
+    } else {
+      authorized = authenticate(request, env);
+    }
+
+    if (!authorized) {
+      return new Response("Unauthorized: Private area or restricted operation", {
         status: 401,
         headers: {
-          "WWW-Authenticate": 'Basic realm="WebDAV Write Access"'
-        }
+          "WWW-Authenticate": 'Basic realm="WebDAV Private Storage"',
+        },
       });
     }
 
     const response = await handleWebDAV(request, env);
-
     setCORSHeaders(response, request);
     return response;
 
   } catch (error) {
-    logger.error("Error in request handling:", error);
+    logger.error("Gateway Error:", error);
     return new Response("Internal Server Error", { status: 500 });
   }
 }
