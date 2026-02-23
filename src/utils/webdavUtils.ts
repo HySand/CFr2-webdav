@@ -7,15 +7,27 @@ export function make_resource_path(request: Request): string {
   return decodeURIComponent(url.pathname.slice(1));
 }
 
-export async function* listAll(bucket: R2Bucket, prefix: string) {
+async function* listAll(bucket, prefix) {
   const options = { prefix, delimiter: "/" };
   let result = await bucket.list(options);
+
+  if (result.delimitedPrefixes) {
+    for (const prefix of result.delimitedPrefixes) {
+      yield {
+        key: prefix,
+        size: 0,
+        uploaded: new Date(),
+        httpMetadata: {},
+        customMetadata: { resourcetype: "collection" },
+        etag: ""
+      };
+    }
+  }
 
   while (result.objects.length > 0) {
     for (const object of result.objects) {
       yield object;
     }
-
     if (result.truncated && result.cursor) {
       result = await bucket.list({ ...options, cursor: result.cursor });
     } else {
