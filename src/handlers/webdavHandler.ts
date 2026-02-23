@@ -96,9 +96,10 @@ async function handleGet(request: Request, bucket: R2Bucket, bucketName: string)
   }
 }
 
-async function handleDirectory(bucket: R2Bucket, resource_path: string, bucketName: string): Promise<Response> {
+async function handleDirectory(bucket, resource_path, bucketName) {
+  logger.info("Current directory path:", resource_path);
+  
   let items = [];
-
   if (resource_path !== "") {
     items.push({ name: "📁 ..", href: "../" });
   }
@@ -106,13 +107,21 @@ async function handleDirectory(bucket: R2Bucket, resource_path: string, bucketNa
   try {
     for await (const object of listAll(bucket, resource_path)) {
       if (object.key === resource_path) continue;
+
       const isDirectory = object.customMetadata?.resourcetype === "collection";
-      const displayName = object.key.split('/').pop() || object.key;
-      const href = `/${object.key}${isDirectory ? "/" : ""}`;
-      items.push({ name: `${isDirectory ? '📁 ' : '📄 '}${displayName}`, href });
+      const displayName = object.key.replace(resource_path, "").split("/")[0];
+      
+      const href = isDirectory 
+        ? object.key.endsWith('/') ? `/${object.key}` : `/${object.key}/`
+        : `/${object.key}`;
+
+      items.push({ 
+        name: `${isDirectory ? "📁 " : "📄 "}${displayName}`, 
+        href: href.replace(/\/+/g, '/')
+      });
     }
-  } catch (error) { 
-    const err = error as Error;
+  } catch (error) {
+    const err = error;
     logger.error("Error listing objects:", err.message);
     return new Response(generateErrorHTML("Error listing directory contents", err.message), {
       status: 500,
